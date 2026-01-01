@@ -1,4 +1,4 @@
-name: Build Fixed
+name: Build V3
 on: [push]
 jobs:
   build:
@@ -6,19 +6,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Fix the Settings (Force Stable Version)
-      - name: Fix Buildozer Spec
+      # 1. GENERATE THE PERFECT SETTINGS (This fixes the 'arch' error!)
+      - name: Create Perfect Buildozer Spec
         run: |
-          sed -i 's/p4a.branch = master/# p4a.branch = master/' buildozer.spec
+          rm -f buildozer.spec
+          echo '[app]' > buildozer.spec
+          echo 'title = Smart Chair' >> buildozer.spec
+          echo 'package.name = chairmonitor' >> buildozer.spec
+          echo 'package.domain = org.test' >> buildozer.spec
+          echo 'source.dir = .' >> buildozer.spec
+          echo 'source.include_exts = py,png,jpg,kv,atlas' >> buildozer.spec
+          echo 'version = 0.1' >> buildozer.spec
+          echo 'requirements = python3,kivy,paho-mqtt' >> buildozer.spec
+          echo 'orientation = portrait' >> buildozer.spec
+          echo 'fullscreen = 0' >> buildozer.spec
+          echo 'android.permissions = INTERNET,ACCESS_NETWORK_STATE' >> buildozer.spec
+          echo 'android.archs = arm64-v8a' >> buildozer.spec
+          echo 'android.allow_backup = True' >> buildozer.spec
+          echo '[buildozer]' >> buildozer.spec
+          echo 'log_level = 2' >> buildozer.spec
+          echo 'warn_on_root = 1' >> buildozer.spec
 
-      # 2. Install Java 17 (Required for Android)
+      # 2. Install Software
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Install Python & Tools
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -32,11 +47,11 @@ jobs:
       - name: Install Buildozer
         run: pip install --upgrade buildozer cython==0.29.33
 
-      # 4. Build the App (With Force Yes)
+      # 3. Build (This will take ~15-20 mins)
       - name: Build APK
         run: yes | buildozer -v android debug
 
-      # 5. Save the APK
+      # 4. Upload
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
