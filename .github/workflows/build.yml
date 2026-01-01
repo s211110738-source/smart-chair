@@ -1,4 +1,4 @@
-name: Build V3
+name: Docker Build
 on: [push]
 jobs:
   build:
@@ -6,10 +6,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. GENERATE THE PERFECT SETTINGS (This fixes the 'arch' error!)
-      - name: Create Perfect Buildozer Spec
+      # 1. Create the Settings File (Fresh & Clean)
+      - name: Create Spec File
         run: |
-          rm -f buildozer.spec
           echo '[app]' > buildozer.spec
           echo 'title = Smart Chair' >> buildozer.spec
           echo 'package.name = chairmonitor' >> buildozer.spec
@@ -27,31 +26,21 @@ jobs:
           echo 'log_level = 2' >> buildozer.spec
           echo 'warn_on_root = 1' >> buildozer.spec
 
-      # 2. Install Software
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      # 2. Fix Permissions (Required for Docker)
+      - name: Fix Permissions
+        run: sudo chmod 777 .
+
+      # 3. Build using the Official Kivy Container
+      - name: Build with Docker
+        uses: addnab/docker-run-action@v3
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          image: kivy/buildozer:latest
+          options: --user 0 -v ${{ github.workspace }}:/home/user/hostcwd
+          run: |
+            cd /home/user/hostcwd
+            yes | buildozer android debug
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential git ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev libffi-dev libssl-dev unzip autoconf libtool pkg-config
-
-      - name: Install Buildozer
-        run: pip install --upgrade buildozer cython==0.29.33
-
-      # 3. Build (This will take ~15-20 mins)
-      - name: Build APK
-        run: yes | buildozer -v android debug
-
-      # 4. Upload
+      # 4. Upload the Result
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
